@@ -441,11 +441,11 @@ class DynamicCache(Cache):
                     self.value_cache.append([])
                 self.key_cache.append(key_states)
                 self.value_cache.append(value_states)
-            #elif (
+            elif (
                 len(self.key_cache[layer_idx]) == 0
-            ):  # fills previously skipped layers; checking for tensor causes errors
-                #self.key_cache[layer_idx] = key_states
-                #self.value_cache[layer_idx] = value_states
+            ):   #fills previously skipped layers; checking for tensor causes errors
+                self.key_cache[layer_idx] = key_states
+                self.value_cache[layer_idx] = value_states
             else:
                 self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
                 self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
@@ -2315,7 +2315,6 @@ class OffloadedStaticCache(StaticCache):
         device: Union[str, torch.device],
         dtype: Optional[torch.dtype] = None,
         offload_device: Union[str, torch.device] = torch.device("cpu"),
-        layer_device_map: Optional[Dict[int, Union[str, torch.device, int]]] = None
         layer_device_map: Optional[Dict[int, Union[str, torch.device, int]]] = None,
     ) -> None:
         self.__time = 0.0   

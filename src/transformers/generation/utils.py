@@ -1667,7 +1667,7 @@ class GenerationMixin:
 
             cache_kwargs = {
                 "config": self.config.get_text_config(),
-                "max_batch_size": batch_size,
+                "batch_size": batch_size,
                 "max_cache_len": max_cache_len,
                 "device": device,
                 "dtype": cache_dtype,
@@ -3251,17 +3251,15 @@ class GenerationMixin:
             # prepare variable output controls (note: some models won't accept all output controls)
             model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
             model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
-
             if is_prefill:
-                outputs = self(**model_inputs, return_dict=True)
+                outputs = self(**model_inputs, return_dict=True)            
+            else:
+                outputs = model_forward(**model_inputs, return_dict=True)
             past_key_values = outputs.past_key_values
             print("count: ", count)
             print("time: ", past_key_values.get_timing())
             count += 1
-            all_time += past_key_values.get_timing()                is_prefill = False
-            else:
-                outputs = model_forward(**model_inputs, return_dict=True)
-
+            all_time += past_key_values.get_timing()  
             # synced_gpus: don't waste resources running the code we don't need; kwargs must be updated before skipping
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs,
