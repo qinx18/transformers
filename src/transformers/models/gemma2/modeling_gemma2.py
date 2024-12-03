@@ -23,6 +23,8 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+import torch.utils.checkpoint
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
 from ...cache_utils import Cache, HybridCache
@@ -92,6 +94,9 @@ class Gemma2MLP(nn.Module):
 
     def forward(self, x):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+
+logger = logging.get_logger(__name__)
 
 
 class Gemma2RotaryEmbedding(nn.Module):
@@ -500,12 +505,12 @@ class Gemma2DecoderLayer(nn.Module):
         self.self_attn = GEMMA2_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
         self.mlp = Gemma2MLP(config)
         self.input_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.config = config
         self.is_sliding = not bool(layer_idx % 2)
         self.pre_feedforward_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_feedforward_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.sliding_window = config.sliding_window
+        self.post_attention_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
         self,
@@ -641,6 +646,9 @@ class Gemma2PreTrainedModel(PreTrainedModel):
             config._attn_implementation = "eager"
 
         return config
+
+
+_CONFIG_FOR_DOC = "Gemma2Config"
 
 
 GEMMA2_INPUTS_DOCSTRING = r"""

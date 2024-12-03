@@ -59,17 +59,47 @@ if is_torch_available():
         SlidingWindowCache,
         StaticCache,
         StaticCacheConfig,
+        DynamicCache,
+        OffloadedCache,
+        SinkCache,
+        EncoderDecoderCache,
+        TimingDynamicCache,
+        TimingStaticCache,
+        TimingOffloadedCache,
+        TimingOffloadedStaticCache,
+        TimingQuantoQuantizedCache,
+        TimingSlidingWindowCache,
+        TimingSinkCache,
+        TimingHybridCache,
+        MyOffloadedStaticCache
     )
     from .logits_process import SynthIDTextWatermarkLogitsProcessor, WatermarkLogitsProcessor
 
     NEEDS_CACHE_CONFIG["quantized"] = QuantizedCacheConfig
     NEEDS_CACHE_CONFIG["static"] = StaticCacheConfig
+    NEEDS_CACHE_CONFIG["timing_quantoquantized"] = QuantizedCacheConfig
     NEED_SETUP_CACHE_CLASSES_MAPPING = {
         "static": StaticCache,
         "offloaded_static": OffloadedStaticCache,
         "sliding_window": SlidingWindowCache,
         "hybrid": HybridCache,
-        "mamba": MambaCache,
+        #"mamba": MambaCache,
+        "dynamic": DynamicCache,
+        "offloaded": OffloadedCache,
+        "timing_dynamic": TimingDynamicCache,
+        "timing_offloaded": TimingOffloadedCache,
+        "timing_offloaded_static": TimingOffloadedStaticCache,
+        "timing_hybrid": TimingHybridCache,
+        "timing_static": TimingStaticCache,
+        "timing_quantoquantized": TimingQuantoQuantizedCache,
+        "timing_sliding_window": TimingSlidingWindowCache,
+        "timing_sink": TimingSinkCache,
+        "Myoffloaded_static": MyOffloadedStaticCache,
+        #"customized": CustomizedCache,
+        "quantized": QuantoQuantizedCache,
+        #"sink": SinkCache,
+        #"encoder_decoder": EncoderDecoderCache
+
     }
     QUANT_BACKEND_CLASSES_MAPPING = {"quanto": QuantoQuantizedCache, "HQQ": HQQQuantizedCache}
     ALL_CACHE_IMPLEMENTATIONS = list(NEED_SETUP_CACHE_CLASSES_MAPPING.keys()) + list(NEEDS_CACHE_CONFIG.keys())

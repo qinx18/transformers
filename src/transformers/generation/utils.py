@@ -24,6 +24,7 @@ import torch
 import torch.distributed as dist
 from torch import nn
 from torch.nn import functional as F
+import time
 
 from ..cache_utils import (
     Cache,
@@ -1649,6 +1650,7 @@ class GenerationMixin:
                 "device": device,
                 "dtype": cache_dtype,
                 "layer_device_map": layer_device_map,
+                #"cache_config": {}
             }
             self._cache = cache_cls(**cache_kwargs)
             if requires_cross_attention_cache:
@@ -3207,11 +3209,13 @@ class GenerationMixin:
         this_peer_finished = False
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
-
+        count = 1
+        all_time = 0
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, device=input_ids.device, cur_len=cur_len, max_length=max_length
         ):
             # prepare model inputs
+            #start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
@@ -3220,7 +3224,11 @@ class GenerationMixin:
 
             # forward pass to get next token
             outputs = self(**model_inputs, return_dict=True)
-
+            past_key_values = outputs.past_key_values
+            print("count: ", count)
+            print("time: ", past_key_values.get_timing())
+            count += 1
+            all_time += past_key_values.get_timing()
             # synced_gpus: don't waste resources running the code we don't need; kwargs must be updated before skipping
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs,
@@ -3233,7 +3241,6 @@ class GenerationMixin:
             # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
             next_token_logits = outputs.logits.clone()[:, -1, :].float()
-            next_token_logits = next_token_logits.to(input_ids.device)
 
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
@@ -3278,11 +3285,17 @@ class GenerationMixin:
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
-
+            
+            #mytime = time.time() - start
+            #print("time: ", mytime)
+            #all_time += mytime
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
-
+        print("cur_len: ", cur_len)
+        print("cache type: ", type(past_key_values))
+        print("batch size: ", batch_size)
+        print("cache time: ", all_time)
         if streamer is not None:
             streamer.end()
 
