@@ -3232,7 +3232,9 @@ class GenerationMixin:
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
         count = 1
-        all_time = 0
+        all_time1 = 0
+        all_time2 = 0
+        token_time = 0
         model_forward = self.__call__
         if isinstance(model_kwargs.get("past_key_values"), StaticCache):
             if self.device.type == "cuda":
@@ -3245,7 +3247,7 @@ class GenerationMixin:
             this_peer_finished, synced_gpus, device=input_ids.device, cur_len=cur_len, max_length=max_length
         ):
             # prepare model inputs
-            #start = time.time()
+            start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
@@ -3257,9 +3259,10 @@ class GenerationMixin:
                 outputs = model_forward(**model_inputs, return_dict=True)
             past_key_values = outputs.past_key_values
             print("count: ", count)
-            print("time: ", past_key_values.get_timing())
+            #print("time: ", past_key_values.get_timing())
+            print("time1: ", past_key_values.get_timing1())
+            print("time2: ", past_key_values.get_timing2())
             count += 1
-            all_time += past_key_values.get_timing()  
             # synced_gpus: don't waste resources running the code we don't need; kwargs must be updated before skipping
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs,
@@ -3317,16 +3320,17 @@ class GenerationMixin:
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
             
-            #mytime = time.time() - start
-            #print("time: ", mytime)
-            #all_time += mytime
+            mytime = time.time() - start
+            print("turntime: ", mytime)
+            token_time += mytime
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
         print("cur_len: ", cur_len)
         print("cache type: ", type(past_key_values))
         print("batch size: ", batch_size)
-        print("cache time: ", all_time)
+        print("all token time: ", token_time)
+        
         if streamer is not None:
             streamer.end()
 
